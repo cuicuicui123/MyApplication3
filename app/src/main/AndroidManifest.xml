@@ -15,6 +15,16 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity
+            android:name=".KeepAliveActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize|navigation|keyboard"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:finishOnTaskLaunch="false"
+            android:process=":live"
+            android:launchMode="singleInstance"
+            android:theme="@style/LiveActivityStyle">
+        </activity>
     </application>
 
 </manifest>
