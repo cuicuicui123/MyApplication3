@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="trans">#00000000</color>
+    <color name="blue_title">#0764a9</color>
+    <color name="blue_bac">#1c8fd0</color>
+    <color name="blue_white">#00a8f0</color>
+    <color name="blue_today">#e4f5fd</color>
+    <color name="trans_blue">#7f4A708B</color>
+    <color name="trans_black">#7f000000</color>
+    <color name="transparent_black">#7f000000</color>
+    <color name="trans_grey">#7faaaaaa</color>
+    <!-- 透明 -->
+    <color name="transparent">#00000000</color>
+    <!-- 黑色 -->
+    <color name="black">#000000</color>
+    <!-- 白色 -->
+    <color name="white">#FFFFFF</color>
+    <!-- 灰色 -->
+    <color name="grey">#dbdbdb</color>
+    <!-- 深灰色 -->
+    <color name="dark_grey">#aaaaaa</color>
+    <!-- 绿色 -->
+    <color name="green">#218868</color>
+    <!-- 海绿色 -->
+    <color name="light_green">#6db237</color>
+    <!-- 天蓝色 -->
+    <color name="gray">#808080</color>
+    <!-- 红色 -->
+    <color name="red">#f83229</color>
+    <!-- 70%透明度 -->
+    <color name="gray_bac">#dae1f1</color>
+    <color name="blue_press">#caeefe</color>
+    <color name="un_remind_color">#ff373b</color>
+    <color name="pop_top">#2ea2dd</color>
+    <color name="pop_bottom">#31c0ff</color>
+    <color name="pop_line_blue">#10a7f6</color>
+    <color name="pop_line_grey">#86dafe</color>
+    <color name="pop_divider_blue">#33abdd</color>
+    <color name="by_week_divider">#c6c4c5</color>
+    <color name="pop_group_select_bac">#60c4de</color>
+    <color name="pop_image_corner">#8ac9ec</color>
+    <color name="search_view_background">#ececec</color>
+    <color name="colorPrimaryDark">#3F51B5</color>
+    <color name="project_detail_background">#eeeeee</color>
+    <color name="phone_blue">#027fc3</color>
+    <color name="grey_home_page">#f7f7f7</color>
+    <color name="grey_home_page_more">#f8f8f8</color>
+    <color name="grey_by_week_top">#f0f0f0</color>
+    <color name="light_grey">#f6f4f5</color>
+    <color name="grey_bac">#f6f4f5</color>
+    <color name="green_plan">#5eb030</color>
+    <color name="orange">#ff9501</color>
+    <color name="blue_department">#009ff2</color>
+    <color name="green_person">#009d4f</color>
+    <color name="grey_class">#949494</color>
+    <color name="red_school">#d00000</color>
+    <color name="yellow_person">#eca000</color>
+    <color name="gray_schedule">#f6f4f5</color>
+    <color name="sidebar_blue">#0896d8</color>
+    <color name="pink_no_net">#fedbd9</color>
+
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorAccent">#FF4081</color>
+
+</resources>
