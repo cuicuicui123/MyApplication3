@@ -2,9 +2,15 @@ package com.cui.myapplication;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Shader;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.util.AttributeSet;
 import android.view.View;
+
+import com.solidfire.gson.Gson;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,7 +34,10 @@ public class MyView extends View {
     private Surface mSurface;
     private Calendar mCalendar;
     private List<TimeBean> mTimeBeanList;
+    private List<ScheduleBean> mScheduleBeanList;
+
     private float mRecordTop;
+    private float mOldRecordTop;
 
     public MyView(Context context) {
         super(context);
@@ -52,6 +61,8 @@ public class MyView extends View {
         mCalendar = Calendar.getInstance();
         mTimeBeanList = new ArrayList<>();
         getClassInfo(getFromAssets("json"));
+        mScheduleBeanList = new ArrayList<>();
+        getScheduleBenaInfo(getFromAssets("json2"));
     }
 
     /**
@@ -115,7 +126,7 @@ public class MyView extends View {
             recordLeft = recordLeft - viewMargin - viewWidth;
             canvas.drawRect(recordLeft, mRecordTop / 2 - viewWidth / 2, recordLeft + viewWidth, mRecordTop / 2 + viewWidth / 2, mSurface.mPaints[i]);
         }
-        drawRowLine(canvas, 0, mRecordTop);
+        drawRowLine(mSurface.mGradientDrawable, canvas, 0, mRecordTop);
         mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
     }
 
@@ -128,9 +139,10 @@ public class MyView extends View {
         mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_12));
         float startX = mSurface.mCellWidth * 2;
         float textHeight = mSurface.mBlackPaint.measureText("年");
+        canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mRecordTop + textHeight * 2 + paddingTop * 2, mSurface.mWhitePaint);
+        drawColumnLine(canvas);
         for (int i = 0;i < 6;i ++) {
             float x = startX + i * mSurface.mCellWidth * 3;
-            canvas.drawLine(x, mRecordTop, x, mRecordTop + textHeight * 2 + paddingTop * 2, mSurface.mLinePaint);
             String week = mSurface.mWeeks[i];
             if (i < 5) {
                 drawTextCenter(canvas, mSurface.mBlackPaint, x, x + mSurface.mCellWidth * 3, mRecordTop + textHeight + paddingTop, week);
@@ -144,7 +156,7 @@ public class MyView extends View {
             }
         }
         mRecordTop = mRecordTop + textHeight * 2 + paddingTop * 2;
-        drawRowLine(canvas, 0, mRecordTop);
+        drawRowLine(mSurface.mGradientDrawable, canvas, 0, mRecordTop);
         mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
         return mRecordTop;
     }
@@ -157,6 +169,7 @@ public class MyView extends View {
         for (int i = 0;i < mTimeBeanList.size();i ++) {
             TimeBean timeBean = mTimeBeanList.get(i);
             if (timeBean.getList().size() > 1) {
+                mOldRecordTop = mRecordTop;
                 List<SectionBean> sectionBeanList = timeBean.getList();
                 int size = sectionBeanList.size();
                 for (int j = 0;j < size;j ++) {
@@ -179,8 +192,10 @@ public class MyView extends View {
             SectionBean sectionBean = timeBean.getList().get(0);
             canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mSurface.mContentMinHeight, mSurface.mBacPaint);
             drawColumnLine(canvas);
+            mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_12));
+            drawTextColumn(canvas, mSurface.mBlackPaint, text, 0, mSurface.mCellWidth * 2, mRecordTop, mRecordTop + mSurface.mContentMinHeight);
             mRecordTop = mRecordTop + mSurface.mContentMinHeight;
-            canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop, mSurface.mLinePaint);
+            drawRowLine(mSurface.mRedGradientDrawable, canvas, 0, mRecordTop);
             mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
         }
     }
@@ -195,8 +210,17 @@ public class MyView extends View {
         SectionBean sectionBean = timeBean.getList().get(index);
         canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mSurface.mContentMinHeight, mSurface.mWhitePaint);
         drawColumnLine(canvas);
+        mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_10));
+        drawTextColumn(canvas, mSurface.mBlackPaint, sectionBean.getName(), mSurface.mCellWidth, 2 * mSurface.mCellWidth, mRecordTop, mRecordTop + mSurface.mContentMinHeight);
         mRecordTop = mRecordTop + mSurface.mContentMinHeight;
-        canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop, mSurface.mLinePaint);
+        if (index == timeBean.getList().size() - 1) {
+            drawRowLine(mSurface.mRedGradientDrawable, canvas, 0, mRecordTop);
+            canvas.drawRect(0, mOldRecordTop, mSurface.mCellWidth, mRecordTop, mSurface.mBacPaint);
+            mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_12));
+            drawTextColumn(canvas, mSurface.mBlackPaint, timeBean.getName(), 0, mSurface.mCellWidth, mOldRecordTop, mRecordTop);
+        } else {
+            drawRowLine(mSurface.mGradientDrawable, canvas, mSurface.mCellWidth, mRecordTop);
+        }
         mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
     }
 
@@ -207,8 +231,9 @@ public class MyView extends View {
     private void drawColumnLine(Canvas canvas){
         float startX = mSurface.mCellWidth * 2;
         for (int i = 0;i < 6;i ++) {
-            canvas.drawLine(startX + i * 3 * mSurface.mCellWidth, mRecordTop, startX + i * 3 * mSurface.mCellWidth,
-                    mRecordTop + mSurface.mContentMinHeight, mSurface.mLinePaint);
+            mSurface.mColumnGradientDrawable.setBounds((int) (startX + i * 3 * mSurface.mCellWidth), (int) mRecordTop,
+                    (int)(startX + i * 3 * mSurface.mCellWidth + mSurface.mLineHeight), (int)(mRecordTop + mSurface.mContentMinHeight + mSurface.mLineHeight));
+            mSurface.mColumnGradientDrawable.draw(canvas);
         }
     }
 
@@ -226,6 +251,17 @@ public class MyView extends View {
         canvas.drawText(text, left + (right - left - textWidth) / 2, bottom, paint);
     }
 
+    private void drawTextColumn(Canvas canvas, Paint paint, String text, float left, float right, float top, float bottom){
+        char[] chars = text.toCharArray();
+        float textSize = paint.measureText("上");
+        float x = left + (right - left - textSize) / 2;
+        float y = (bottom - top - paint.measureText(text)) / 2;
+        for(int i = 0;i < chars.length;i ++){
+            String c = String.valueOf(chars[i]);
+            canvas.drawText(c, x, top + y + (i + 1) * textSize, paint);
+        }
+    }
+
     /**
      * 绘制灰色横线
      *
@@ -233,8 +269,9 @@ public class MyView extends View {
      * @param left   横线X坐标
      * @param top    横线Y坐标
      */
-    private void drawRowLine(Canvas canvas, float left, float top) {
-        canvas.drawLine(left, top, mSurface.mWidth, top, mSurface.mLinePaint);
+    private void drawRowLine(Drawable drawable, Canvas canvas, float left, float top) {
+        drawable.setBounds((int) left, (int) top, mSurface.mWidth, (int) (top + mSurface.mLineHeight));
+        drawable.draw(canvas);
     }
 
     /**
@@ -289,6 +326,10 @@ public class MyView extends View {
         return result;
     }
 
+    /**
+     * 根据json获取timeBean信息
+     * @param response
+     */
     private void getClassInfo(String response){
         try {
             JSONObject jsonObject = new JSONObject(response);
@@ -319,6 +360,23 @@ public class MyView extends View {
         }
     }
 
+    private void getScheduleBenaInfo(String response){
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            JSONObject Goodo = jsonObject.getJSONObject("Goodo");
+            final Gson gson = new Gson();
+            JudgeIsJsonArray.judge(Goodo, "R", new JudgeIsJsonArray.OnJudged() {
+                @Override
+                public void judged(JSONObject jsonObject) throws JSONException {
+                    ScheduleBean bean = gson.fromJson(jsonObject.toString(), ScheduleBean.class);
+                    mScheduleBeanList.add(bean);
+                }
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * 用于存储相关变量，避免在onDraw实例化对象
@@ -329,6 +387,7 @@ public class MyView extends View {
         float mLength;
         float mCellWidth;
         float mContentMinHeight;
+        float mLineHeight;
 
         int[] mTitleColors;
         String[] mTitles;
@@ -336,6 +395,10 @@ public class MyView extends View {
         public String[] mWeeks;
         String mDate;
         SimpleDateFormat mFormat;
+
+        GradientDrawable mGradientDrawable;
+        GradientDrawable mColumnGradientDrawable;
+        GradientDrawable mRedGradientDrawable;
 
         Paint mBlackPaint;
         Paint mBluePaint;
@@ -370,7 +433,7 @@ public class MyView extends View {
             mBluePaint.setAntiAlias(true);
 
             mBacPaint = new Paint();
-            mBacPaint.setColor(getResources().getColor(R.color.grey_by_week_top));
+            mBacPaint.setColor(getResources().getColor(R.color.light_grey));
 
             mGreyPaint = new Paint();
             mGreyPaint.setColor(getResources().getColor(R.color.gray));
@@ -391,9 +454,18 @@ public class MyView extends View {
             mPaints = new Paint[]{mBlackPaint, mYellowPaint, mBluePaint, mRedPaint};
 
             mLinePaint = new Paint();
-            mLinePaint.setColor(getResources().getColor(R.color.grey));
-            mLinePaint.setStrokeWidth(getResources().getDimension(R.dimen.dp_0_5));
+            mLineHeight = getResources().getDimension(R.dimen.dp_0_5);
+            mLinePaint.setStrokeWidth(mLineHeight);
+            //新建一个线性渐变，前两个参数是渐变开始的点坐标，第三四个参数是渐变结束的点的坐标。连接这2个点就拉出一条渐变线了，玩过PS的都懂。
+            // 然后那个数组是渐变的颜色。下一个参数是渐变颜色的分布，如果为空，每个颜色就是均匀分布的。最后是模式，这里设置的是循环渐变
+            Shader mShader = new LinearGradient(0, 0, 0, 0,new int[] {0xffffffff, 0xff888888},null,Shader.TileMode.REPEAT);
             mLinePaint.setAntiAlias(true);
+//            mLinePaint.setColor(getResources().getColor(R.color.grey));
+            mLinePaint.setShader(mShader);
+
+            mGradientDrawable = (GradientDrawable) getResources().getDrawable(R.drawable.gradient_grey);
+            mColumnGradientDrawable = (GradientDrawable) getResources().getDrawable(R.drawable.gradient_grey_column);
+            mRedGradientDrawable = (GradientDrawable) getResources().getDrawable(R.drawable.gradient_red);
         }
     }
 
