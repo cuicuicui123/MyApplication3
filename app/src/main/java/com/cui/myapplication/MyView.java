@@ -51,7 +51,7 @@ public class MyView extends View {
         mSurface.init();
         mCalendar = Calendar.getInstance();
         mTimeBeanList = new ArrayList<>();
-//        getClassInfo(getFromAssets("json"));
+        getClassInfo(getFromAssets("json"));
     }
 
     /**
@@ -116,7 +116,7 @@ public class MyView extends View {
             canvas.drawRect(recordLeft, mRecordTop / 2 - viewWidth / 2, recordLeft + viewWidth, mRecordTop / 2 + viewWidth / 2, mSurface.mPaints[i]);
         }
         drawRowLine(canvas, 0, mRecordTop);
-        mRecordTop = mRecordTop + mSurface.mLineHeight;
+        mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
     }
 
     /**
@@ -130,7 +130,7 @@ public class MyView extends View {
         float textHeight = mSurface.mBlackPaint.measureText("年");
         for (int i = 0;i < 6;i ++) {
             float x = startX + i * mSurface.mCellWidth * 3;
-            canvas.drawLine(x, mRecordTop, x + mSurface.mLineHeight, mRecordTop + textHeight * 2 + paddingTop * 2, mSurface.mLinePaint);
+            canvas.drawLine(x, mRecordTop, x, mRecordTop + textHeight * 2 + paddingTop * 2, mSurface.mLinePaint);
             String week = mSurface.mWeeks[i];
             if (i < 5) {
                 drawTextCenter(canvas, mSurface.mBlackPaint, x, x + mSurface.mCellWidth * 3, mRecordTop + textHeight + paddingTop, week);
@@ -140,15 +140,19 @@ public class MyView extends View {
                 String date = month + "." + day;
                 drawTextCenter(canvas, mSurface.mBlackPaint, x, x + mSurface.mCellWidth * 3, mRecordTop + textHeight * 2 + paddingTop, date);
             } else {
-                drawTextCenter(canvas, mSurface.mBlackPaint, x, x + mSurface.mCellWidth * 3, mRecordTop + textHeight * 3 / 2 + paddingTop, week);
+                drawTextCenter(canvas, mSurface.mBlackPaint, x, mSurface.mWidth, mRecordTop + textHeight * 3 / 2 + paddingTop, week);
             }
         }
         mRecordTop = mRecordTop + textHeight * 2 + paddingTop * 2;
         drawRowLine(canvas, 0, mRecordTop);
-        mRecordTop = mRecordTop + mSurface.mLineHeight;
+        mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
         return mRecordTop;
     }
 
+    /**
+     * 绘制内容部分
+     * @param canvas
+     */
     private void drawContent(Canvas canvas){
         for (int i = 0;i < mTimeBeanList.size();i ++) {
             TimeBean timeBean = mTimeBeanList.get(i);
@@ -164,15 +168,49 @@ public class MyView extends View {
         }
     }
 
+    /**
+     * 绘制一节课的时间段
+     * @param canvas
+     * @param timeBean
+     */
     private void drawOneSectionContent(Canvas canvas, TimeBean timeBean){
         String text = timeBean.getName();
         if (timeBean.getList().size() > 0) {
             SectionBean sectionBean = timeBean.getList().get(0);
             canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mSurface.mContentMinHeight, mSurface.mBacPaint);
+            drawColumnLine(canvas);
             mRecordTop = mRecordTop + mSurface.mContentMinHeight;
+            canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop, mSurface.mLinePaint);
+            mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
         }
     }
-    private void drawSectionsContent(Canvas canvas, TimeBean timeBean, int index){}
+
+    /**
+     * 绘制多节课的时间段
+     * @param canvas
+     * @param timeBean
+     * @param index
+     */
+    private void drawSectionsContent(Canvas canvas, TimeBean timeBean, int index){
+        SectionBean sectionBean = timeBean.getList().get(index);
+        canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mSurface.mContentMinHeight, mSurface.mWhitePaint);
+        drawColumnLine(canvas);
+        mRecordTop = mRecordTop + mSurface.mContentMinHeight;
+        canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop, mSurface.mLinePaint);
+        mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
+    }
+
+    /**
+     * 根据记录的顶部位置绘制竖直分隔线
+     * @param canvas
+     */
+    private void drawColumnLine(Canvas canvas){
+        float startX = mSurface.mCellWidth * 2;
+        for (int i = 0;i < 6;i ++) {
+            canvas.drawLine(startX + i * 3 * mSurface.mCellWidth, mRecordTop, startX + i * 3 * mSurface.mCellWidth,
+                    mRecordTop + mSurface.mContentMinHeight, mSurface.mLinePaint);
+        }
+    }
 
     /**
      * 给出指定文字和左右边缘值以及底部值，将文字画在指定位置中间
@@ -196,7 +234,7 @@ public class MyView extends View {
      * @param top    横线Y坐标
      */
     private void drawRowLine(Canvas canvas, float left, float top) {
-        canvas.drawLine(left, top, mSurface.mWidth, top + mSurface.mLineHeight, mSurface.mLinePaint);
+        canvas.drawLine(left, top, mSurface.mWidth, top, mSurface.mLinePaint);
     }
 
     /**
@@ -288,9 +326,8 @@ public class MyView extends View {
     public class Surface {
         int mWidth;
         float mPadding;
-        int mLength;
+        float mLength;
         float mCellWidth;
-        float mLineHeight;
         float mContentMinHeight;
 
         int[] mTitleColors;
@@ -306,6 +343,7 @@ public class MyView extends View {
         Paint mGreyPaint;
         Paint mRedPaint;
         Paint mYellowPaint;
+        Paint mWhitePaint;
         Paint mLinePaint;
         Paint[] mPaints;
 
@@ -321,7 +359,6 @@ public class MyView extends View {
             mFormat = new SimpleDateFormat("yyyy年mm月dd日");
             mDate = getDateText(new Date());
             mPadding = getResources().getDimension(R.dimen.dp_2);
-            mLineHeight = getResources().getDimension(R.dimen.dp_0_5);
             mContentMinHeight = getResources().getDimension(R.dimen.dp_48);
 
             mBlackPaint = new Paint();
@@ -346,10 +383,16 @@ public class MyView extends View {
             mYellowPaint = new Paint();
             mYellowPaint.setColor(getResources().getColor(R.color.yellow_person));
             mYellowPaint.setAntiAlias(true);
+
+            mWhitePaint = new Paint();
+            mWhitePaint.setColor(getResources().getColor(R.color.white));
+            mWhitePaint.setAntiAlias(true);
+
             mPaints = new Paint[]{mBlackPaint, mYellowPaint, mBluePaint, mRedPaint};
 
             mLinePaint = new Paint();
             mLinePaint.setColor(getResources().getColor(R.color.grey));
+            mLinePaint.setStrokeWidth(getResources().getDimension(R.dimen.dp_0_5));
             mLinePaint.setAntiAlias(true);
         }
     }
