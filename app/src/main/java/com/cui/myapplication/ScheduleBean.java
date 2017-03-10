@@ -28,6 +28,8 @@ public class ScheduleBean {
     private String Work;
     private String Address;
     private int Type;
+    private int mWeek;
+    private int mTheClass;
 
     public int getID() {
         return ID;
@@ -91,5 +93,21 @@ public class ScheduleBean {
 
     public void setType(int Type) {
         this.Type = Type;
+    }
+
+    public int getWeek() {
+        return mWeek;
+    }
+
+    public void setWeek(int week) {
+        mWeek = week;
+    }
+
+    public int getTheClass() {
+        return mTheClass;
+    }
+
+    public void setTheClass(int theClass) {
+        mTheClass = theClass;
     }
 }

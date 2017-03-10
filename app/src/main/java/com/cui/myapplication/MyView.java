@@ -16,6 +16,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -35,9 +36,14 @@ public class MyView extends View {
     private Calendar mCalendar;
     private List<TimeBean> mTimeBeanList;
     private List<ScheduleBean> mScheduleBeanList;
+    private List<ScheduleBean>[][] mScheduleBeanLists;
 
     private float mRecordTop;
     private float mOldRecordTop;
+
+    private Date mCurDate;
+
+    private int mRowNum = 6;
 
     public MyView(Context context) {
         super(context);
@@ -59,10 +65,27 @@ public class MyView extends View {
         mSurface = new Surface();
         mSurface.init();
         mCalendar = Calendar.getInstance();
+        mCurDate = mCalendar.getTime();
         mTimeBeanList = new ArrayList<>();
         getClassInfo(getFromAssets("json"));
+        getScheduleBeanLists();
         mScheduleBeanList = new ArrayList<>();
-        getScheduleBenaInfo(getFromAssets("json2"));
+        getScheduleBeanInfo(getFromAssets("json2"));
+    }
+
+    /**
+     * 根据timeBeanList获取scheduleBeanLists二维数组横向和纵向容量
+     */
+    private void getScheduleBeanLists() {
+        int time = 0;
+        for (TimeBean bean : mTimeBeanList) {
+            List<SectionBean> list = bean.getList();
+            if (list != null) {
+                time += list.size();
+            }
+
+        }
+        mScheduleBeanLists = new List[mRowNum][time];
     }
 
     /**
@@ -83,6 +106,7 @@ public class MyView extends View {
         mRecordTop = 0;
         drawTitle(canvas);
         drawWeekText(canvas);
+        mCalendar.setTime(mCurDate);
         drawContent(canvas);
 //        for (int i = 0; i < mSurface.mTexts.length; i++) {
 //            String text = mSurface.mTexts[i];
@@ -166,6 +190,7 @@ public class MyView extends View {
      * @param canvas
      */
     private void drawContent(Canvas canvas){
+        int theClass = 0;
         for (int i = 0;i < mTimeBeanList.size();i ++) {
             TimeBean timeBean = mTimeBeanList.get(i);
             if (timeBean.getList().size() > 1) {
@@ -173,10 +198,12 @@ public class MyView extends View {
                 List<SectionBean> sectionBeanList = timeBean.getList();
                 int size = sectionBeanList.size();
                 for (int j = 0;j < size;j ++) {
-                    drawSectionsContent(canvas, timeBean, j);
+                    drawSectionsContent(canvas, timeBean, j, theClass);
+                    theClass ++;
                 }
             } else {
-                drawOneSectionContent(canvas, timeBean);
+                drawOneSectionContent(canvas, timeBean, theClass);
+                theClass ++;
             }
         }
     }
@@ -186,7 +213,7 @@ public class MyView extends View {
      * @param canvas
      * @param timeBean
      */
-    private void drawOneSectionContent(Canvas canvas, TimeBean timeBean){
+    private void drawOneSectionContent(Canvas canvas, TimeBean timeBean, int theClass){
         String text = timeBean.getName();
         if (timeBean.getList().size() > 0) {
             SectionBean sectionBean = timeBean.getList().get(0);
@@ -194,6 +221,17 @@ public class MyView extends View {
             drawColumnLine(canvas);
             mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_12));
             drawTextColumn(canvas, mSurface.mBlackPaint, text, 0, mSurface.mCellWidth * 2, mRecordTop, mRecordTop + mSurface.mContentMinHeight);
+            for(int i = 0;i < mRowNum;i ++){
+                List<ScheduleBean> list = mScheduleBeanLists[i][theClass];
+                if (list != null) {
+                    int size = list.size();
+                    for (int j = 0;j < size;j ++) {
+                        String work = list.get(j).getWork();
+                        drawTextCenter(canvas, mSurface.mBlackPaint, mSurface.mCellWidth * (2 + i * 3), mSurface.mCellWidth * (2 + (i + 1) * 3), mRecordTop, work);
+                    }
+                }
+
+            }
             mRecordTop = mRecordTop + mSurface.mContentMinHeight;
             drawRowLine(mSurface.mRedGradientDrawable, canvas, 0, mRecordTop);
             mRecordTop = mRecordTop + mSurface.mLinePaint.getStrokeWidth();
@@ -205,13 +243,25 @@ public class MyView extends View {
      * @param canvas
      * @param timeBean
      * @param index
+     * @param theClass 第几节课
      */
-    private void drawSectionsContent(Canvas canvas, TimeBean timeBean, int index){
+    private void drawSectionsContent(Canvas canvas, TimeBean timeBean, int index, int theClass){
         SectionBean sectionBean = timeBean.getList().get(index);
         canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mSurface.mContentMinHeight, mSurface.mWhitePaint);
         drawColumnLine(canvas);
         mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_10));
         drawTextColumn(canvas, mSurface.mBlackPaint, sectionBean.getName(), mSurface.mCellWidth, 2 * mSurface.mCellWidth, mRecordTop, mRecordTop + mSurface.mContentMinHeight);
+
+        for(int i = 0;i < mRowNum;i ++){
+            List<ScheduleBean> list = mScheduleBeanLists[i][theClass];
+            if (list != null) {
+                int size = list.size();
+                for (int j = 0;j < size;j ++) {
+                    String work = list.get(j).getWork();
+                    drawTextOverCellWidth(work, canvas, mRecordTop, i);
+                }
+            }
+        }
         mRecordTop = mRecordTop + mSurface.mContentMinHeight;
         if (index == timeBean.getList().size() - 1) {
             drawRowLine(mSurface.mRedGradientDrawable, canvas, 0, mRecordTop);
@@ -283,15 +333,18 @@ public class MyView extends View {
      * @param index  文字在数组中的位置
      */
     private void drawTextOverCellWidth(String text, Canvas canvas, float y, int index) {
+        float startX = 2 * mSurface.mCellWidth;
         char[] chars = text.toCharArray();
         float width = 0;
+        float height = mSurface.mBlackPaint.measureText("年");
+        y = y + height;
         String newText = "";
         int lines = 0;
         for (int i = 0; i < chars.length; i++) {
             char c = chars[i];
             width = width + mSurface.mBlackPaint.measureText(String.valueOf(c));
-            if (width > mSurface.mCellWidth) {
-                canvas.drawText(newText, index * mSurface.mCellWidth, y * (lines + 1), mSurface.mBlackPaint);
+            if (width > mSurface.mCellWidth * 3) {
+                canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth, y + height * (lines + 1), mSurface.mBlackPaint);
                 width = 0;
                 newText = "";
                 lines++;
@@ -301,7 +354,7 @@ public class MyView extends View {
             }
         }
         float newTextWidth = mSurface.mBlackPaint.measureText(newText);
-        canvas.drawText(newText, index * mSurface.mCellWidth + (mSurface.mCellWidth - newTextWidth) / 2, y * (lines + 1), mSurface.mBlackPaint);
+        canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2, y * (lines + 1), mSurface.mBlackPaint);
     }
 
     /**
@@ -360,7 +413,11 @@ public class MyView extends View {
         }
     }
 
-    private void getScheduleBenaInfo(String response){
+    /**
+     * 处理json获取scheduleBean，并根据timeBean时间获取对应的在数组中的位置
+     * @param response
+     */
+    private void getScheduleBeanInfo(String response){
         try {
             JSONObject jsonObject = new JSONObject(response);
             JSONObject Goodo = jsonObject.getJSONObject("Goodo");
@@ -369,10 +426,57 @@ public class MyView extends View {
                 @Override
                 public void judged(JSONObject jsonObject) throws JSONException {
                     ScheduleBean bean = gson.fromJson(jsonObject.toString(), ScheduleBean.class);
+                    getScheduleBeanWeek(bean);
+                    getScheduleBeanClass(bean);
+                    List<ScheduleBean> list = mScheduleBeanLists[bean.getWeek()][bean.getTheClass()];
+                    if (list == null) {
+                        list = new ArrayList<>();
+                        mScheduleBeanLists[bean.getWeek()][bean.getTheClass()] = list;
+                    }
+                    list.add(bean);
                     mScheduleBeanList.add(bean);
                 }
             });
         } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void getScheduleBeanClass(ScheduleBean bean) {
+        String beginTime = DataTransform.transformTime(bean.getBeginTime());
+        if (bean.getIsAllDay() == 1) {
+            bean.setTheClass(0);
+        } else {
+            int theClass = 0;
+            int timeBeanSize = mTimeBeanList.size();
+            for (int i = 0;i < timeBeanSize;i ++) {
+                List<SectionBean> list = mTimeBeanList.get(i).getList();
+                if (list != null) {
+                    int sectionBeanSize = list.size();
+                    for (int j = 0;j < sectionBeanSize;j ++) {
+                        SectionBean sectionBean = list.get(j);
+                        if (beginTime.compareTo(sectionBean.getBegin()) <= 0) {
+                            bean.setTheClass(theClass);
+                            return;
+                        }
+                        theClass ++;
+                    }
+                }
+            }
+            bean.setTheClass(theClass);
+        }
+    }
+
+    private void getScheduleBeanWeek(ScheduleBean bean) {
+        String dateStr = DataTransform.transform(bean.getDate());
+        try {
+            Date date = MyDateFormat.getDateFormat().parse(dateStr);
+            mCalendar.setTime(date);
+            int day = mCalendar.get(Calendar.DAY_OF_WEEK);
+            //如果是周日就跟周六放在一起，其余的从周一开始位置是0，依次往后排
+            bean.setWeek(day == 1 ? 5 : day - 2);
+        } catch (ParseException e) {
             e.printStackTrace();
         }
     }
