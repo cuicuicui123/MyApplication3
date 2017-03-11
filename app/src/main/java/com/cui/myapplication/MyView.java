@@ -256,9 +256,10 @@ public class MyView extends View {
             List<ScheduleBean> list = mScheduleBeanLists[i][theClass];
             if (list != null) {
                 int size = list.size();
+                float top = mRecordTop;
                 for (int j = 0;j < size;j ++) {
                     String work = list.get(j).getWork();
-                    drawTextOverCellWidth(work, canvas, mRecordTop, i);
+                    top = drawTextOverCellWidth(work, canvas, top, i);
                 }
             }
         }
@@ -332,7 +333,7 @@ public class MyView extends View {
      * @param y      每一行的高度
      * @param index  文字在数组中的位置
      */
-    private void drawTextOverCellWidth(String text, Canvas canvas, float y, int index) {
+    private float drawTextOverCellWidth(String text, Canvas canvas, float y, int index) {
         float startX = 2 * mSurface.mCellWidth;
         char[] chars = text.toCharArray();
         float width = 0;
@@ -344,7 +345,8 @@ public class MyView extends View {
             char c = chars[i];
             width = width + mSurface.mBlackPaint.measureText(String.valueOf(c));
             if (width > mSurface.mCellWidth * 3) {
-                canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth, y + height * (lines + 1), mSurface.mBlackPaint);
+                float newTextWidth = mSurface.mBlackPaint.measureText(newText);
+                canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2, y + height * (lines + 1), mSurface.mBlackPaint);
                 width = 0;
                 newText = "";
                 lines++;
@@ -354,7 +356,8 @@ public class MyView extends View {
             }
         }
         float newTextWidth = mSurface.mBlackPaint.measureText(newText);
-        canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2, y * (lines + 1), mSurface.mBlackPaint);
+        canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2, y + (lines + 1) * height, mSurface.mBlackPaint);
+        return y + (lines + 1) * height;
     }
 
     /**
