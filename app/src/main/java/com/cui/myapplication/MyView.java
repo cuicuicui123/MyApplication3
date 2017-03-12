@@ -156,16 +156,17 @@ public class MyView extends View {
 
     /**
      * 绘制周次信息
+     *
      * @param canvas 画布
      */
-    private float drawWeekText(Canvas canvas){
+    private float drawWeekText(Canvas canvas) {
         float paddingTop = getResources().getDimension(R.dimen.dp_4);
         mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_12));
         float startX = mSurface.mCellWidth * 2;
         float textHeight = mSurface.mBlackPaint.measureText("年");
         canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mRecordTop + textHeight * 2 + paddingTop * 2, mSurface.mWhitePaint);
-        drawColumnLine(canvas);
-        for (int i = 0;i < 6;i ++) {
+        drawColumnLine(canvas, mRecordTop + mSurface.mContentMinHeight);
+        for (int i = 0; i < 6; i++) {
             float x = startX + i * mSurface.mCellWidth * 3;
             String week = mSurface.mWeeks[i];
             if (i < 5) {
@@ -187,45 +188,47 @@ public class MyView extends View {
 
     /**
      * 绘制内容部分
+     *
      * @param canvas
      */
-    private void drawContent(Canvas canvas){
+    private void drawContent(Canvas canvas) {
         int theClass = 0;
-        for (int i = 0;i < mTimeBeanList.size();i ++) {
+        for (int i = 0; i < mTimeBeanList.size(); i++) {
             TimeBean timeBean = mTimeBeanList.get(i);
             if (timeBean.getList().size() > 1) {
                 mOldRecordTop = mRecordTop;
                 List<SectionBean> sectionBeanList = timeBean.getList();
                 int size = sectionBeanList.size();
-                for (int j = 0;j < size;j ++) {
+                for (int j = 0; j < size; j++) {
                     drawSectionsContent(canvas, timeBean, j, theClass);
-                    theClass ++;
+                    theClass++;
                 }
             } else {
                 drawOneSectionContent(canvas, timeBean, theClass);
-                theClass ++;
+                theClass++;
             }
         }
     }
 
     /**
      * 绘制一节课的时间段
+     *
      * @param canvas
      * @param timeBean
      */
-    private void drawOneSectionContent(Canvas canvas, TimeBean timeBean, int theClass){
+    private void drawOneSectionContent(Canvas canvas, TimeBean timeBean, int theClass) {
         String text = timeBean.getName();
         if (timeBean.getList().size() > 0) {
             SectionBean sectionBean = timeBean.getList().get(0);
             canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mSurface.mContentMinHeight, mSurface.mBacPaint);
-            drawColumnLine(canvas);
+            drawColumnLine(canvas, mRecordTop + mSurface.mContentMinHeight);
             mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_12));
             drawTextColumn(canvas, mSurface.mBlackPaint, text, 0, mSurface.mCellWidth * 2, mRecordTop, mRecordTop + mSurface.mContentMinHeight);
-            for(int i = 0;i < mRowNum;i ++){
+            for (int i = 0; i < mRowNum; i++) {
                 List<ScheduleBean> list = mScheduleBeanLists[i][theClass];
                 if (list != null) {
                     int size = list.size();
-                    for (int j = 0;j < size;j ++) {
+                    for (int j = 0; j < size; j++) {
                         String work = list.get(j).getWork();
                         drawTextCenter(canvas, mSurface.mBlackPaint, mSurface.mCellWidth * (2 + i * 3), mSurface.mCellWidth * (2 + (i + 1) * 3), mRecordTop, work);
                     }
@@ -240,30 +243,22 @@ public class MyView extends View {
 
     /**
      * 绘制多节课的时间段
+     *
      * @param canvas
      * @param timeBean
      * @param index
      * @param theClass 第几节课
      */
-    private void drawSectionsContent(Canvas canvas, TimeBean timeBean, int index, int theClass){
+    private void drawSectionsContent(Canvas canvas, TimeBean timeBean, int index, int theClass) {
         SectionBean sectionBean = timeBean.getList().get(index);
-        canvas.drawRect(0, mRecordTop, mSurface.mWidth, mRecordTop + mSurface.mContentMinHeight, mSurface.mWhitePaint);
-        drawColumnLine(canvas);
+        float maxTop = calculateMaxTop(theClass);
+        maxTop = mRecordTop + mSurface.mContentMinHeight > maxTop ? mRecordTop + mSurface.mContentMinHeight : maxTop;
+        canvas.drawRect(0, mRecordTop, mSurface.mWidth, maxTop, mSurface.mWhitePaint);
+        drawColumnLine(canvas, maxTop);
         mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_10));
-        drawTextColumn(canvas, mSurface.mBlackPaint, sectionBean.getName(), mSurface.mCellWidth, 2 * mSurface.mCellWidth, mRecordTop, mRecordTop + mSurface.mContentMinHeight);
-
-        for(int i = 0;i < mRowNum;i ++){
-            List<ScheduleBean> list = mScheduleBeanLists[i][theClass];
-            if (list != null) {
-                int size = list.size();
-                float top = mRecordTop;
-                for (int j = 0;j < size;j ++) {
-                    String work = list.get(j).getWork();
-                    top = drawTextOverCellWidth(work, canvas, top, i);
-                }
-            }
-        }
-        mRecordTop = mRecordTop + mSurface.mContentMinHeight;
+        drawTextColumn(canvas, mSurface.mBlackPaint, sectionBean.getName(), mSurface.mCellWidth, 2 * mSurface.mCellWidth, mRecordTop, maxTop);
+        drawScheduleWorkText(canvas, theClass, maxTop);
+        mRecordTop = maxTop;
         if (index == timeBean.getList().size() - 1) {
             drawRowLine(mSurface.mRedGradientDrawable, canvas, 0, mRecordTop);
             canvas.drawRect(0, mOldRecordTop, mSurface.mCellWidth, mRecordTop, mSurface.mBacPaint);
@@ -276,38 +271,98 @@ public class MyView extends View {
     }
 
     /**
+     * 绘制日程文字
+     * @param canvas 画布
+     * @param theClass 节次
+     * @param maxTop 这节课对应的行的高度
+     */
+    private void drawScheduleWorkText(Canvas canvas, int theClass, float maxTop) {
+        for (int i = 0; i < mRowNum; i++) {
+            List<ScheduleBean> list = mScheduleBeanLists[i][theClass];
+            if (list != null) {
+                int size = list.size();
+                float top = mRecordTop;
+                boolean isMultiple = size > 1;
+                for (int j = 0; j < size; j++) {
+                    String work = list.get(j).getWork();
+                    boolean isEnd = j == (size - 1);
+                    boolean isFirst = j == 0;
+                    top = calculateTop(work, top, isEnd, isMultiple, isFirst);
+                }
+                top = mRecordTop + (maxTop - top) / 2;
+//                top = mRecordTop;
+                for (int j = 0; j < size; j++) {
+                    String work = list.get(j).getWork();
+                    boolean isEnd = (j == size - 1);
+                    boolean isFirst = j == 0;
+                    top = drawTextOverCellWidth(work, canvas, top, i, isEnd, isMultiple, isFirst);
+                }
+            }
+        }
+    }
+
+    /**
+     * 计算某节课对应的行最大高度
+     * @param theClass 节次
+     * @return 最大高度
+     */
+    private float calculateMaxTop(int theClass) {
+        float maxTop = 0;
+        for (int i = 0; i < mRowNum; i++) {
+            List<ScheduleBean> list = mScheduleBeanLists[i][theClass];
+            if (list != null) {
+                int size = list.size();
+                float top = mRecordTop;
+//                float top = mRecordTop + mSurface.mPadding4;
+                boolean isMultiple = size > 1;
+                for (int j = 0; j < size; j++) {
+                    String work = list.get(j).getWork();
+                    boolean isEnd = j == size - 1;
+                    boolean isFirst = j == 0;
+                    top = calculateTop(work, top, isEnd, isMultiple, isFirst);
+                }
+                maxTop = maxTop > top ? maxTop : top;
+            }
+        }
+//        maxTop = maxTop + mSurface.mPadding4;
+        return maxTop;
+    }
+
+    /**
      * 根据记录的顶部位置绘制竖直分隔线
+     *
      * @param canvas
      */
-    private void drawColumnLine(Canvas canvas){
+    private void drawColumnLine(Canvas canvas, float maxTop) {
         float startX = mSurface.mCellWidth * 2;
-        for (int i = 0;i < 6;i ++) {
+        for (int i = 0; i < 6; i++) {
             mSurface.mColumnGradientDrawable.setBounds((int) (startX + i * 3 * mSurface.mCellWidth), (int) mRecordTop,
-                    (int)(startX + i * 3 * mSurface.mCellWidth + mSurface.mLineHeight), (int)(mRecordTop + mSurface.mContentMinHeight + mSurface.mLineHeight));
+                    (int) (startX + i * 3 * mSurface.mCellWidth + mSurface.mLineHeight), (int) (maxTop + mSurface.mLineHeight));
             mSurface.mColumnGradientDrawable.draw(canvas);
         }
     }
 
     /**
      * 给出指定文字和左右边缘值以及底部值，将文字画在指定位置中间
+     *
      * @param canvas 画布
-     * @param paint 画笔
-     * @param left 左边缘
-     * @param right 右边缘
+     * @param paint  画笔
+     * @param left   左边缘
+     * @param right  右边缘
      * @param bottom 底部
-     * @param text 文字
+     * @param text   文字
      */
-    private void drawTextCenter(Canvas canvas, Paint paint, float left, float right, float bottom, String text){
+    private void drawTextCenter(Canvas canvas, Paint paint, float left, float right, float bottom, String text) {
         float textWidth = paint.measureText(text);
         canvas.drawText(text, left + (right - left - textWidth) / 2, bottom, paint);
     }
 
-    private void drawTextColumn(Canvas canvas, Paint paint, String text, float left, float right, float top, float bottom){
+    private void drawTextColumn(Canvas canvas, Paint paint, String text, float left, float right, float top, float bottom) {
         char[] chars = text.toCharArray();
         float textSize = paint.measureText("上");
         float x = left + (right - left - textSize) / 2;
         float y = (bottom - top - paint.measureText(text)) / 2;
-        for(int i = 0;i < chars.length;i ++){
+        for (int i = 0; i < chars.length; i++) {
             String c = String.valueOf(chars[i]);
             canvas.drawText(c, x, top + y + (i + 1) * textSize, paint);
         }
@@ -326,27 +381,64 @@ public class MyView extends View {
     }
 
     /**
+     * 计算每一行的最大高度
+     *
+     * @param text  文字
+     * @param y     纵坐标
+     * @param isEnd 是否是最后一条，是的话返回的行数不用+1
+     * @return 最大高度
+     */
+    private float calculateTop(String text, float y, boolean isEnd, boolean isMultiple, boolean isFirst) {
+        mSurface.mBlackPaint.setTextSize(getResources().getDimension(R.dimen.text_size_10));
+        char[] chars = text.toCharArray();
+        float width = 0;
+        float height = mSurface.mBlackPaint.measureText("年");
+        String newText = "";
+        y = isFirst ? y + height : y + height;//要居中显示，文字坐标 + height / 2
+        int lines = 0;
+        for (int i = 0; i < chars.length; i++) {
+            char c = chars[i];
+            width = width + mSurface.mBlackPaint.measureText(String.valueOf(c));
+            if (width > mSurface.mCellWidth * 3) {
+                width = 0;
+                newText = "";
+                lines ++;
+                i--;
+            } else {
+                newText = newText + c;
+            }
+        }
+        float top = y + lines * height;
+        //多条数据，但不是最后一条的时候要留出mPadding4的空隙，然后画线
+        if (!isEnd && isMultiple) {
+            top = top + mSurface.mPadding2 + mSurface.mLineHeight;
+        }
+        top = isEnd ? top + height: top + mSurface.mPadding2;
+        return top;
+    }
+
+    /**
      * 超出视图长度之后的绘制方法，换行绘制
      *
      * @param text
      * @param canvas 画布
-     * @param y      每一行的高度
-     * @param index  文字在数组中的位置
+     * @param y      纵坐标
+     * @param index  周次
      */
-    private float drawTextOverCellWidth(String text, Canvas canvas, float y, int index) {
+    private float drawTextOverCellWidth(String text, Canvas canvas, float y, int index, boolean isEnd, boolean isMultiple, boolean isFirst) {
         float startX = 2 * mSurface.mCellWidth;
         char[] chars = text.toCharArray();
         float width = 0;
         float height = mSurface.mBlackPaint.measureText("年");
-        y = y + height;
         String newText = "";
+        y = isFirst ? y + height: y + height;
         int lines = 0;
         for (int i = 0; i < chars.length; i++) {
             char c = chars[i];
             width = width + mSurface.mBlackPaint.measureText(String.valueOf(c));
             if (width > mSurface.mCellWidth * 3) {
                 float newTextWidth = mSurface.mBlackPaint.measureText(newText);
-                canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2, y + height * (lines + 1), mSurface.mBlackPaint);
+                canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2, y + height * lines, mSurface.mBlackPaint);
                 width = 0;
                 newText = "";
                 lines++;
@@ -356,23 +448,34 @@ public class MyView extends View {
             }
         }
         float newTextWidth = mSurface.mBlackPaint.measureText(newText);
-        canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2, y + (lines + 1) * height, mSurface.mBlackPaint);
-        return y + (lines + 1) * height;
+        canvas.drawText(newText, startX + index * 3 * mSurface.mCellWidth + (3 * mSurface.mCellWidth - newTextWidth) / 2,
+                y + lines * height, mSurface.mBlackPaint);
+        float top = y + lines * height + mSurface.mPadding2;
+        if (!isEnd && isMultiple) {
+            top = top + mSurface.mPadding2;
+            mSurface.mGradientDrawable.setBounds((int) (startX + index * 3 * mSurface.mCellWidth), (int) top,
+                    (int) (startX + (index + 1) * 3 * mSurface.mCellWidth), (int) (top + mSurface.mLineHeight));
+            mSurface.mGradientDrawable.draw(canvas);
+            top = top + mSurface.mLineHeight;
+        }
+        top = isEnd ? top + height: top + mSurface.mPadding2;
+        return top;
     }
 
     /**
      * 从assets 文件夹中获取文件并读取数据
+     *
      * @param fileName
      * @return
      */
-    public String getFromAssets(String fileName){
+    public String getFromAssets(String fileName) {
         String result = "";
         try {
             InputStream in = getResources().getAssets().open(fileName);
             //获取文件的字节数
             int length = in.available();
             //创建byte数组
-            byte[]  buffer = new byte[length];
+            byte[] buffer = new byte[length];
             //将文件中的数据读到byte数组中
             in.read(buffer);
             result = new String(buffer);
@@ -384,9 +487,10 @@ public class MyView extends View {
 
     /**
      * 根据json获取timeBean信息
+     *
      * @param response
      */
-    private void getClassInfo(String response){
+    private void getClassInfo(String response) {
         try {
             JSONObject jsonObject = new JSONObject(response);
             JSONObject Goodo = jsonObject.getJSONObject("Goodo");
@@ -418,9 +522,10 @@ public class MyView extends View {
 
     /**
      * 处理json获取scheduleBean，并根据timeBean时间获取对应的在数组中的位置
+     *
      * @param response
      */
-    private void getScheduleBeanInfo(String response){
+    private void getScheduleBeanInfo(String response) {
         try {
             JSONObject jsonObject = new JSONObject(response);
             JSONObject Goodo = jsonObject.getJSONObject("Goodo");
@@ -453,17 +558,17 @@ public class MyView extends View {
         } else {
             int theClass = 0;
             int timeBeanSize = mTimeBeanList.size();
-            for (int i = 0;i < timeBeanSize;i ++) {
+            for (int i = 0; i < timeBeanSize; i++) {
                 List<SectionBean> list = mTimeBeanList.get(i).getList();
                 if (list != null) {
                     int sectionBeanSize = list.size();
-                    for (int j = 0;j < sectionBeanSize;j ++) {
+                    for (int j = 0; j < sectionBeanSize; j++) {
                         SectionBean sectionBean = list.get(j);
                         if (beginTime.compareTo(sectionBean.getBegin()) <= 0) {
                             bean.setTheClass(theClass);
                             return;
                         }
-                        theClass ++;
+                        theClass++;
                     }
                 }
             }
@@ -490,7 +595,8 @@ public class MyView extends View {
      */
     public class Surface {
         int mWidth;
-        float mPadding;
+        float mPadding4;
+        float mPadding2;
         float mLength;
         float mCellWidth;
         float mContentMinHeight;
@@ -523,12 +629,13 @@ public class MyView extends View {
             mTitleColors = new int[]{R.color.black, R.color.yellow_person, R.color.blue_department, R.color.red_school};
             mTexts = new String[]{"黑", "黑白", "黑白黑", "黑白黑白", "黑白黑白黑白",
                     "黑白黑白黑吧黑白黑白", "黑白黑白黑吧黑白黑白黑白黑白黑吧黑白黑白"};
-            mWeeks = new String[]{"一","二","三","四","五","六&日"};
+            mWeeks = new String[]{"一", "二", "三", "四", "五", "六&日"};
             mLength = 20;
             mCellWidth = mWidth / mLength;
             mFormat = new SimpleDateFormat("yyyy年mm月dd日");
             mDate = getDateText(new Date());
-            mPadding = getResources().getDimension(R.dimen.dp_2);
+            mPadding4 = getResources().getDimension(R.dimen.dp_4);
+            mPadding2 = getResources().getDimension(R.dimen.dp_2);
             mContentMinHeight = getResources().getDimension(R.dimen.dp_48);
 
             mBlackPaint = new Paint();
@@ -565,7 +672,7 @@ public class MyView extends View {
             mLinePaint.setStrokeWidth(mLineHeight);
             //新建一个线性渐变，前两个参数是渐变开始的点坐标，第三四个参数是渐变结束的点的坐标。连接这2个点就拉出一条渐变线了，玩过PS的都懂。
             // 然后那个数组是渐变的颜色。下一个参数是渐变颜色的分布，如果为空，每个颜色就是均匀分布的。最后是模式，这里设置的是循环渐变
-            Shader mShader = new LinearGradient(0, 0, 0, 0,new int[] {0xffffffff, 0xff888888},null,Shader.TileMode.REPEAT);
+            Shader mShader = new LinearGradient(0, 0, 0, 0, new int[]{0xffffffff, 0xff888888}, null, Shader.TileMode.REPEAT);
             mLinePaint.setAntiAlias(true);
 //            mLinePaint.setColor(getResources().getColor(R.color.grey));
             mLinePaint.setShader(mShader);
